@@ -1,0 +1,6 @@
+openai
+langchain
+chroma
+tiktoken
+PyPDF2
+pymupdf
