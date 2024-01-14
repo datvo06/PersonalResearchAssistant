@@ -52,35 +52,25 @@ def gpt4ocr(encoded_image):
             response = openai.ChatCompletion.create(
             model="gpt-4-vision-preview",
             messages=[
-                {
-                    "role": "system",
-                    "content": [
-                        {"type": "text", "text": system_prompt},
+                    {
+                        "role": "system",
+                        "content": [
+                            {"type": "text", "text": system_prompt},
+                        ],
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"},
+                            }
+                        ],
+                    }
                     ],
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"},
-                        }
-                    ],
-                }
-            ],
-            max_tokens=1200,
+                max_tokens=1200,
             )
             content = response.choices[0].message.content
-            content_lines = content.split('\n')
-            start_idx = -1
-            end_idx = -1
-            while start_idx < len(content_lines) - 1 and not content_lines[start_idx + 1].startswith('```'):
-                start_idx += 1
-            while end_idx > 0 and not content_lines[end_idx - 1].startswith('```'):
-                end_idx -= 1
-            if start_idx == len(content_lines) or end_idx == -1:
-                raise Exception('No code block found')
-            content = '\n'.join(content_lines[start_idx + 1:end_idx])
             break
         except Exception as e:
             print(e)
