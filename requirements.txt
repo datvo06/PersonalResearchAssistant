@@ -4,3 +4,4 @@ chroma
 tiktoken
 PyPDF2
 pymupdf
+nougat
