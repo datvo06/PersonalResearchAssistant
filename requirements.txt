@@ -5,3 +5,4 @@ tiktoken
 PyPDF2
 pymupdf
 nougat
+backoff==2.2.1

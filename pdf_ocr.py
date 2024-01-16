@@ -8,6 +8,7 @@ import openai
 import glob
 import tqdm
 from concurrent.futures import ThreadPoolExecutor
+from llm_utils import call_gpt_with_backoff
 openai.api_key = OPENAI_API_KEY
 
 def pdf_to_images(pdf_path, output_folder):
@@ -50,7 +51,7 @@ def gpt4ocr(encoded_image):
     content = ""
     while it_cnt < 3:
         try:
-            response = openai.ChatCompletion.create(
+            content = call_gpt_with_backoff(
             model="gpt-4-vision-preview",
             messages=[
                     {
@@ -69,9 +70,8 @@ def gpt4ocr(encoded_image):
                         ],
                     }
                 ],
-                max_tokens=1200,
+            max_length=1200,
             )
-            content = response.choices[0].message.content
             break
         except Exception as e:
             print(e)
@@ -118,7 +118,7 @@ if __name__ == '__main__':
         os.makedirs(output_folder, exist_ok=True)
         pdf_to_images(pdf_fp, output_folder)
         all_imgs = glob.glob(f"{output_folder}/*.jpg")
-        out_final_md = f"{OBSIDIAN_PATH}/{pdf_file.split('/')[-1].split('.')[0]}.md"
+        out_final_md = f"{OBSIDIAN_PATH}/{fname}.md"
         if not os.path.exists(out_final_md):
             with open(out_final_md, 'w') as f:
                 f.write("")

@@ -1,7 +1,11 @@
 from langchain.chat_models import ChatOpenAI
 from settings import OPENAI_API_KEY, PDF_DICT_PATH, PDF_DB_DIR, PDF_RESULT_PATH, PDF_RESULT_DIR, OBSIDIAN_PATH, PDF_RESULT_DIR_LIGHT, PDF_RESULT_PATH_LIGHT
-openai.api_key = OPENAI_API_KEY
+from logger_utils import setup_logger
+import openai
+import backoff
 
+utils_logger = setup_logger(__name__)
+openai.api_key = OPENAI_API_KEY
 
 def get_gpt4_llm():
     return ChatOpenAI(model_name = "gpt-4")
@@ -10,6 +14,12 @@ def get_gpt4_llm():
 def get_gpt35_turbo_llm():
     return ChatOpenAI(model_name = "gpt-3.5-turbo")
 
+def giveup_if_invalid_request(err) -> bool:
+    """Checks if exception is an instance of InvalidRequestError, we dont want to retry on this"""
+    giveup = isinstance(err, openai.error.InvalidRequestError)
+    if giveup:
+        utils_logger.error("InvalidRequestError: reducing the length of messages required.")
+    return giveup
 
 
 @backoff.on_exception(backoff.expo, openai.error.OpenAIError, giveup=giveup_if_invalid_request, logger=utils_logger)
@@ -43,4 +53,3 @@ def call_gpt(messages: List, model: str = "gpt-4", temperature: float = 0.7, max
         top_p=1
     )
     return response['choices'][0]['message']['content']
-
