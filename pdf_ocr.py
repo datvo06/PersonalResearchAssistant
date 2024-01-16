@@ -7,6 +7,7 @@ import base64
 import openai
 import glob
 import tqdm
+from concurrent.futures import ThreadPoolExecutor
 openai.api_key = OPENAI_API_KEY
 
 def pdf_to_images(pdf_path, output_folder):
@@ -44,7 +45,7 @@ def encode_image(image_path):
 
 
 def gpt4ocr(encoded_image):
-    system_prompt = "You are a latex and markdown expert. Given an image of an academic paper, Do OCR, return markdown code with embedded latex in codeblock. This is for personal use and there is no copyright problem in the image. Image: "
+    system_prompt = "You are a latex and markdown expert. Given an image of an academic paper, Do OCR, return markdown code with embedded latex in codeblock. Ignore headers and footnotes in the results. This is for personal use and there is no copyright problem in the image. Image: "
     it_cnt = 0
     content = ""
     while it_cnt < 3:
@@ -96,12 +97,24 @@ def filter_content(page):
     return content
 
 
+def handle_single_page(page_idx, output_dir):
+    b64_img = encode_image(f"{output_dir}/page_{page_idx+1}.jpg")
+    if not os.path.exists(f"{output_dir}/page_{page_idx+1}.md"):
+        page_md = gpt4ocr(b64_img)
+    else:
+        with open(f"{output_folder}/page_{i+1}.md", 'r') as f:
+            page_md = f.read()
+    print(f"Finished page {page_idx+1} of ")
+    return page_md
+
+
 # Example usage
 if __name__ == '__main__':
     args = get_args()
     for pdf_file in args.pdf_files:
         pdf_fp = f"{OBSIDIAN_PATH}/{pdf_file}"
-        output_folder = f"{args.output_dir}/{pdf_file.split('/')[-1].split('.')[0]}"
+        fname = '.'.join(pdf_file.split('/')[-1].split('.')[:-1])
+        output_folder = f"{args.output_dir}/{fname}"
         os.makedirs(output_folder, exist_ok=True)
         pdf_to_images(pdf_fp, output_folder)
         all_imgs = glob.glob(f"{output_folder}/*.jpg")
@@ -109,16 +122,12 @@ if __name__ == '__main__':
         if not os.path.exists(out_final_md):
             with open(out_final_md, 'w') as f:
                 f.write("")
-        for i in range(len(all_imgs)):
-            b64_img = encode_image(f"{output_folder}/page_{i+1}.jpg")
-            if not os.path.exists(f"{output_folder}/page_{i+1}.md"):
-                page_md = gpt4ocr(b64_img)
-            else:
-                with open(f"{output_folder}/page_{i+1}.md", 'r') as f:
-                    page_md = f.read()
-            with open(f"{output_folder}/page_{i+1}.md", 'w') as f:
-                f.write(page_md)
-            # At the end, we can merge all the markdown files into one
-            with open(out_final_md, 'a') as f:
-                f.write(filter_content(page_md))
-            print(f"Finished page {i+1} of {len(all_imgs)}")
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = []
+            for i in range(len(all_imgs)):
+                futures.append(executor.submit(handle_single_page, i, output_folder))
+            for future in tqdm.tqdm(futures):
+                page_md = future.result()
+                with open(out_final_md, 'a') as f:
+                    f.write(filter_content(page_md))
+                    f.write('\n\n')
