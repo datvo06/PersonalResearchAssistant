@@ -3,6 +3,7 @@ from settings import OPENAI_API_KEY, PDF_DICT_PATH, PDF_DB_DIR, PDF_RESULT_PATH,
 from logger_utils import setup_logger
 import openai
 import backoff
+from typing import List
 
 utils_logger = setup_logger(__name__)
 openai.api_key = OPENAI_API_KEY
@@ -52,4 +53,4 @@ def call_gpt(messages: List, model: str = "gpt-4", temperature: float = 0.7, max
         frequency_penalty=0.0,
         top_p=1
     )
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
