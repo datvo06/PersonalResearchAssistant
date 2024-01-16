@@ -93,7 +93,7 @@ def filter_content(page):
     content = '\n'.join(page_lines[start_idx + 2:end_idx-2])
     content = content.replace('\\( ', '$').replace(' \\)', '$')
     content = content.replace('\\(', '$').replace('\\)', '$')
-    content = content.replace('\\[', '$$').replace(' \\]', '$$')
+    content = content.replace('\\[', '$$').replace('\\]', '$$')
     return content
 
 
